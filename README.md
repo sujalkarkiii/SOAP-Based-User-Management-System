@@ -1,143 +1,217 @@
-# 🚀 User Manager Using SOAP
+# 🧼 SOAP MERN Stack App
 
-![Node.js](https://img.shields.io/badge/Node.js-Backend-green)
-![React](https://img.shields.io/badge/React-Frontend-blue)
-![SOAP](https://img.shields.io/badge/SOAP-XML-orange)
-![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-brightgreen)
+A full-stack User Management application built with **MongoDB, Express, React, and Node.js** that uses **SOAP (Simple Object Access Protocol)** as the primary communication protocol — with a REST API proxy layer for the frontend.
 
-A **SOAP-Based User Management System** built with React, Node.js,
-Express, and MongoDB.
+---
 
-This project demonstrates how a frontend communicates with a backend
-using **XML-based SOAP web services**, along with REST APIs for
-comparison.
+## 📁 Project Structure
 
-------------------------------------------------------------------------import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
+```
+SOAP/
+├── backend/
+│   └── src/
+│       ├── databse/               # (database connection — optional)
+│       ├── schema/
+│       │   └── userschema.js      # Mongoose User model
+│       ├── service/
+│       │   └── service.js         # SOAP service implementation
+│       ├── index.js               # Express + SOAP server entry point
+│       ├── user.wsdl              # WSDL contract (defines all SOAP operations)
+│       └── .env                   # Environment variables
+│
+├── frontend/
+│   └── src/
+│       ├── components/
+│       │   ├── SoapInspector.jsx  # Raw SOAP envelope builder & sender
+│       │   └── UserModal.jsx      # Create / Edit user modal with live XML preview
+│       ├── services/
+│       │   └── api.js             # REST helpers + SOAP XML envelope builders
+│       ├── App.css
+│       ├── App.jsx                # Main app — user table, search, pagination
+│       ├── index.css
+│       └── main.jsx
+│   ├── .env
+│   ├── index.html
+│   ├── vite.config.js             # Vite proxy config (fixes CORS)
+│   └── package.json
+│
+└── README.md
+```
 
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
-});
+---
 
-## 📌 Features
+## ⚙️ Prerequisites
 
--   ✅ Create User\
--   📄 Get All Users (Pagination)\
--   🔍 Get User by ID\
--   ✏️ Update User\
--   ❌ Delete User\
--   🔎 Search Users\
--   📨 Raw SOAP XML Request Builder\
--   🔁 REST API (for comparison)\
--   ❤️ Health Check Endpoint
+- **Node.js** v18+
+- **MongoDB** (local or Atlas)
+- **npm** v9+
 
-------------------------------------------------------------------------
+---
 
-## 🛠 Tech Stack
+## 🚀 Getting Started
 
-### 🔹 Frontend
+### 1. Clone the repo
 
--   React (Vite)
--   Axios
--   Fetch API
+```bash
+git clone <your-repo-url>
+cd SOAP
+```
 
-### 🔹 Backend
+### 2. Setup Backend
 
--   Node.js
--   Express.js
--   SOAP (XML Web Services)
--   MongoDB Atlas
-
-------------------------------------------------------------------------
-
-## 🏗 Architecture
-
-React Frontend\
-↓\
-SOAP XML / REST Request\
-↓\
-Express Backend (SOAP + REST)\
-↓\
-MongoDB Atlas
-
-------------------------------------------------------------------------
-
-## 📂 Project Structure
-
-frontend/ → React Client\
-backend/ → Express Server (SOAP + REST)
-
-------------------------------------------------------------------------
-
-## ⚙️ Installation Guide
-
-### 1️⃣ Clone the Repository
-
-git clone https://github.com/your-username/user-manager-soap.git\
-cd user-manager-soap
-
-------------------------------------------------------------------------
-
-## 🔹 Backend Setup
-
-cd backend\
+```bash
+cd backend
 npm install
+```
 
-Create `.env` file inside backend folder:
+Create a `.env` file inside `backend/src/`:
 
-MONGODB_URI=your_mongodb_connection_string\
+```env
 PORT=5000
+MONGO_URI=mongodb://localhost:27017/soap_mern
+```
 
-Start backend:
+> For MongoDB Atlas:
+> `MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/soap_mern`
 
-npm start
+Start the backend:
 
-Server runs on:\
-http://localhost:5000
-
-------------------------------------------------------------------------
-
-## 🔹 Frontend Setup
-
-cd frontend\
-npm install\
+```bash
 npm run dev
+```
 
-Create `.env` file inside frontend folder (Vite):
+You should see all 4 lines in the terminal:
+```
+✅ MongoDB connected: mongodb://localhost:27017/soap_mern
+🚀 Server running   → http://localhost:5000
+🧼 SOAP service     → http://localhost:5000/soap
+📄 WSDL             → http://localhost:5000/soap?wsdl
+🌐 REST API         → http://localhost:5000/api
+```
 
-VITE_API_URL=http://localhost:5000
+### 3. Setup Frontend
 
-Frontend runs on:\
-http://localhost:5173
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-------------------------------------------------------------------------
+Frontend runs at → **http://localhost:5173**
 
-## 🔄 SOAP Endpoint
+---
 
-POST http://localhost:5000/soap
+## 🔑 Environment Variables
 
-------------------------------------------------------------------------
+### `backend/src/.env`
 
-## 📚 What This Project Demonstrates
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `5000` | Backend server port |
+| `MONGO_URI` | `mongodb://localhost:27017/soap_mern` | MongoDB connection string |
 
--   SOAP XML messaging structure\
--   Difference between REST and SOAP\
--   Service-Oriented Architecture (SOA)\
--   Backend API integration with MongoDB
+---
 
-------------------------------------------------------------------------
+## 🧼 SOAP Operations
 
-## 🎓 Learning Purpose
+All operations are defined in `user.wsdl` and implemented in `service/service.js`.
 
-This project was developed for academic and learning purposes to
-understand how SOAP services are implemented and consumed in modern
-applications.
+| Operation | Description | Input |
+|-----------|-------------|-------|
+| `GetAllUsers` | Paginated list of users | `page`, `limit` |
+| `GetUserById` | Single user by MongoDB ID | `id` |
+| `CreateUser` | Create a new user | `name`, `email`, `age`, `role` |
+| `UpdateUser` | Update existing user | `id`, `name`, `email`, `age`, `role` |
+| `DeleteUser` | Delete a user | `id` |
+| `SearchUsers` | Search by name or email | `query` |
 
-------------------------------------------------------------------------
+**SOAP Endpoint:** `POST http://localhost:5000/soap`  
+**WSDL:** `http://localhost:5000/soap?wsdl`  
+**Content-Type:** `text/xml`
 
-## 👨‍💻 Author
+### Example — CreateUser
 
-Sujal Karki
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:usr="http://www.example.com/soap/user">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <usr:CreateUserRequest>
+      <usr:user>
+        <usr:name>John Doe</usr:name>
+        <usr:email>john@example.com</usr:email>
+        <usr:age>30</usr:age>
+        <usr:role>user</usr:role>
+      </usr:user>
+    </usr:CreateUserRequest>
+  </soapenv:Body>
+</soapenv:Envelope>
+```
+
+---
+
+## 🌐 REST API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/users?page=1&limit=10` | Get paginated users |
+| `GET` | `/api/users/search?q=john` | Search users |
+| `GET` | `/api/users/:id` | Get user by ID |
+| `POST` | `/api/users` | Create user |
+| `PUT` | `/api/users/:id` | Update user |
+| `DELETE` | `/api/users/:id` | Delete user |
+| `GET` | `/health` | Server health check |
+
+---
+
+## 🗃️ User Schema
+
+```js
+// backend/src/schema/userschema.js
+{
+  name:      String   // required
+  email:     String   // required, unique, lowercase
+  age:       Number   // required, min: 1
+  role:      String   // "user" | "admin" | "moderator"  (default: "user")
+  createdAt: Date     // auto-generated (timestamps: true)
+  updatedAt: Date     // auto-generated (timestamps: true)
+}
+```
+
+---
+
+## 🔬 SOAP Inspector
+
+Built-in tool in the sidebar (🔬 icon) — lets you:
+
+- Select any SOAP operation from a dropdown
+- Load a pre-filled XML envelope example
+- Edit the XML freely before sending
+- Send the real SOAP request to the server
+- View the raw XML response with status code and response time
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, Vite, Tailwind CSS |
+| Backend | Node.js, Express |
+| Protocol | SOAP 1.1 (`soap` npm package) |
+| Database | MongoDB + Mongoose |
+| Proxy | Vite dev proxy (eliminates CORS) |
+
+---
+
+## 🐛 Common Issues & Fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| CORS blocked on `/soap` | Browser can't cross origins | Use Vite proxy — fetch `/soap` not `localhost:5000/soap` |
+| `500` on `/api/users` | Missing schema file or wrong path | Check `backend/src/schema/userschema.js` exists |
+| `Cannot find module './service/service'` | Wrong import path in `index.js` | Must be `require('./service/service')` |
+| WSDL parse error on startup | Broken `<o>` tags in WSDL binding | All binding outputs must use `<o>` not `<o>` |
+| MongoDB not connecting | Wrong URI or Atlas IP not whitelisted | Check `.env` MONGO_URI and Atlas network access |

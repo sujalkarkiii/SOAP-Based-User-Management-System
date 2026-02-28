@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { soapExamples } from "../services/api";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-const SOAP_URL = `${BASE_URL}/soap`;
+const SOAP_URL = "/soap";
 
 const operations = ["GetAllUsers", "GetUserById", "CreateUser", "UpdateUser", "DeleteUser", "SearchUsers"];
 

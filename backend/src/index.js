@@ -1,92 +1,121 @@
 require('dotenv').config();
-const express    = require('express');
-const cors       = require('cors');
-const mongoose   = require('mongoose');
-const soap       = require('soap');
-const fs         = require('fs');
-const path       = require('path');
-const http       = require('http');
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const soap = require('soap');
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
 const bodyParser = require('body-parser');
 
-const userService = require('./service/service');
-const User        = require('./schema/userschema');
+const User = require('./schema/userschema'); // Your Mongoose schema
+const userService = require('./service/service'); // Your SOAP service implementation
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/soap_mern';
 
-// ─── Middleware ───────────────────────────────────────────────────────────────
+// ── Middleware ───────────────────────────────
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
+    origin: ['http://localhost:3000', 'http://localhost:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'SOAPAction'],
   credentials: true
 }));
-app.use(bodyParser.raw({ type: 'text/xml', limit: '5mb' }));
-app.use(bodyParser.text({ type: 'text/xml', limit: '5mb' }));
-app.use(express.json());
 
-// ─── REST API ─────────────────────────────────────────────────────────────────
-const proxyRouter = express.Router();
+// Parse JSON and XML bodies
+app.use(bodyParser.json());
+app.use(bodyParser.text({ type: 'text/xml'}));
+app.use(bodyParser.raw({ type: 'text/xml'}));
 
-proxyRouter.get('/users', async (req, res) => {
-  try {
-    const page  = parseInt(req.query.page)  || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip  = (page - 1) * limit;
-    const users = await User.find().skip(skip).limit(limit).lean();
-    const total = await User.countDocuments();
-    res.json({ users, total, page, limit });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+// Log requests for debugging
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.url}`);
+  next();
 });
 
-proxyRouter.get('/users/search', async (req, res) => {
+// ── REST API ───────────────────────────────
+const apiRouter = express.Router();
+
+apiRouter.get('/users', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      User.find().skip(skip).limit(limit).lean(),
+      User.countDocuments()
+    ]);
+
+    res.json({ users, total, page, limit });
+  } catch (err) {
+    console.error('Error GET /users:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+apiRouter.get('/users/search', async (req, res) => {
   try {
     const query = req.query.q || '';
     const users = await User.find({
       $or: [
-        { name:  { $regex: query, $options: 'i' } },
+        { name: { $regex: query, $options: 'i' } },
         { email: { $regex: query, $options: 'i' } }
       ]
     }).lean();
-    res.json({ users, total: users.length });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
 
-proxyRouter.get('/users/:id', async (req, res) => {
+    res.json({ users, total: users.length });
+  } catch (err) {
+    console.error('Error GET /users/search:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+apiRouter.get('/users/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id).lean();
     if (!user) return res.status(404).json({ error: 'Not found' });
     res.json(user);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (err) {
+    console.error('Error GET /users/:id:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
-
-proxyRouter.post('/users', async (req, res) => {
+apiRouter.post('/users', async (req, res) => {
   try {
     const saved = await new User(req.body).save();
     res.status(201).json(saved);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (err) {
+    console.error('Error POST /users:', err);
+    res.status(400).json({ error: err.message });
+  }
 });
-
-proxyRouter.put('/users/:id', async (req, res) => {
+apiRouter.put('/users/:id', async (req, res) => {
   try {
-    const updated = await User.findByIdAndUpdate(
-      req.params.id, req.body, { new: true, runValidators: true }
-    );
+    const updated = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
     if (!updated) return res.status(404).json({ error: 'Not found' });
     res.json(updated);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (err) {
+    console.error('Error PUT /users/:id:', err);
+    res.status(400).json({ error: err.message });
+  }
 });
-
-proxyRouter.delete('/users/:id', async (req, res) => {
+apiRouter.delete('/users/:id', async (req, res) => {
   try {
     const deleted = await User.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Not found' });
     res.json({ success: true, message: `User ${deleted.name} deleted` });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (err) {
+    console.error('Error DELETE /users/:id:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.use('/api', proxyRouter);
+app.use('/api', apiRouter);
 
-// ─── Health ───────────────────────────────────────────────────────────────────
+// ── Health Check ─────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -96,64 +125,41 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ─── WSDL ─────────────────────────────────────────────────────────────────────
-app.get('/soap', (req, res, next) => {
-  if (req.query.wsdl !== undefined) {
-    const wsdl = fs.readFileSync(path.join(__dirname, 'user.wsdl'), 'utf8');
-    res.set('Content-Type', 'text/xml');
-    return res.send(wsdl);
-  }
-  next();
-});
-
-// ─── Explicit OPTIONS handler for SOAP ────────────────────────────────────────
-app.options('/soap', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, SOAPAction, Authorization');
-  res.sendStatus(200);
-});
-
-// ─── Start ────────────────────────────────────────────────────────────────────
+// ── Start Server + SOAP ──────────────────────
 mongoose.connect(MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected:', MONGO_URI);
 
-    const server = http.createServer();
-
     const wsdl = fs.readFileSync(path.join(__dirname, 'user.wsdl'), 'utf8');
-    soap.listen(server, '/soap', userService, wsdl);
+    const soapPath = '/soap';
 
-    const listeners = server.listeners('request').slice();
-    server.removeAllListeners('request');
-
-    server.on('request', (req, res) => {
-      if (req.url.startsWith('/soap')) {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, SOAPAction, Authorization');
-
-        if (req.method === 'OPTIONS') {
-          res.writeHead(200);
-          res.end();
-          return;
-        }
-
-        listeners.forEach(l => l.call(server, req, res));
-        return;
-      }
-
-      app(req, res);
+    // Handle SOAP preflight manually
+    app.options(soapPath, (req, res) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, SOAPAction');
+      res.sendStatus(200);
     });
 
+    // Handle SOAP POST manually
+    app.post(soapPath, (req, res, next) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, SOAPAction');
+      next();
+    });
+
+    const server = http.createServer(app);
+    soap.listen(server, soapPath, userService, wsdl);
+
     server.listen(PORT, () => {
-      console.log(`🚀 Server running   → http://localhost:${PORT}`);
-      console.log(`🧼 SOAP service     → http://localhost:${PORT}/soap`);
-      console.log(`📄 WSDL             → http://localhost:${PORT}/soap?wsdl`);
-      console.log(`🌐 REST API         → http://localhost:${PORT}/api`);
+      console.log(`🚀 Server running → http://localhost:${PORT}`);
+      console.log(`🧼 SOAP service → http://localhost:${PORT}${soapPath}`);
+      console.log(`📄 WSDL → http://localhost:${PORT}${soapPath}?wsdl`);
+      console.log(`🌐 REST API → http://localhost:${PORT}/api`);
     });
   })
   .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
-  });
+  })

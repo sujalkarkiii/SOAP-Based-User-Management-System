@@ -1,4 +1,4 @@
-# 🧼 SOAP MERN Stack App
+#  SOAP MERN Stack App
 
 A full-stack User Management application built with **MongoDB, Express, React, and Node.js** that uses **SOAP (Simple Object Access Protocol)** as the primary communication protocol — with a REST API proxy layer for the frontend.
 
